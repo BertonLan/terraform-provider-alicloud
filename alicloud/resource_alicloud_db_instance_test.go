@@ -157,7 +157,7 @@ func TestAccAlicloudDBInstance_vpc(t *testing.T) {
 		CheckDestroy: testAccCheckDBInstanceDestroy,
 		Steps: []resource.TestStep{
 			resource.TestStep{
-				Config: testAccDBInstance_vpc,
+				Config: testAccDBInstance_vpc(DatabaseCommonTestCase),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDBInstanceExists(
 						"alicloud_db_instance.foo", &instance),
@@ -395,36 +395,32 @@ resource "alicloud_db_instance" "foo" {
 }
 `
 
-const testAccDBInstance_vpc = `
-data "alicloud_zones" "default" {
-	available_resource_creation = "Rds"
-}
-variable "name" {
-	default = "tf-testAccDBInstance_vpc"
-}
-resource "alicloud_vpc" "foo" {
-	name = "${var.name}"
-	cidr_block = "172.16.0.0/12"
+func testAccDBInstance_vpc(common string) string {
+	return fmt.Sprintf(`
+	%s
+	variable "creation" {
+		default = "Rds"
+	}
+	variable "multi_az" {
+		default = "false"
+	}
+	variable "name" {
+		default = "tf-testAccDBInstance_vpc"
+	}
+
+	resource "alicloud_db_instance" "foo" {
+		engine = "MySQL"
+		engine_version = "5.6"
+		instance_type = "rds.mysql.t1.small"
+		instance_storage = "10"
+		instance_charge_type = "Postpaid"
+		instance_name = "${var.name}"
+		vswitch_id = "${alicloud_vswitch.default.id}"
+		security_ips = ["10.168.1.12", "100.69.7.112"]
+	}
+	`, common)
 }
 
-resource "alicloud_vswitch" "foo" {
- 	vpc_id = "${alicloud_vpc.foo.id}"
- 	cidr_block = "172.16.0.0/21"
- 	availability_zone = "${data.alicloud_zones.default.zones.0.id}"
- 	name = "${var.name}"
-}
-
-resource "alicloud_db_instance" "foo" {
-	engine = "MySQL"
-	engine_version = "5.6"
-	instance_type = "rds.mysql.t1.small"
-	instance_storage = "10"
-	instance_charge_type = "Postpaid"
-	instance_name = "${var.name}"
-	vswitch_id = "${alicloud_vswitch.foo.id}"
-	security_ips = ["10.168.1.12", "100.69.7.112"]
-}
-`
 const testAccDBInstance_multiAZ = `
 data "alicloud_zones" "default" {
   available_resource_creation= "Rds"
